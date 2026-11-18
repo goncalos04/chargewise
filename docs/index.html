@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-PT" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101513">
+<meta name="description" content="Compara tarifários de carregamento elétrico em Portugal.">
+<title>ChargeWise — Comparador de carregamento</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png">
+<link rel="stylesheet" href="./style.css">
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+<header><div class="shell top"><a class="brand" href="./"><img src="./icon-192.png" alt="" width="38" height="38">Charge<span>Wise</span></a><div class="actions"><button id="install" hidden>Instalar</button><button id="theme" type="button">Modo claro</button></div></div></header>
+<main class="shell">
+  <nav aria-label="Secções">
+    <button data-page="simulator" aria-current="page">Simulador</button>
+    <button data-page="tariffs">Tarifários</button>
+    <button data-page="history">Histórico</button>
+    <button data-page="settings">Definições</button>
+  </nav>
+  <p id="status" role="status" hidden></p>
+  <section id="simulator">
+    <h1>Quanto custa carregar?</h1>
+    <p class="intro">Compara o custo real da sessão, incluindo as taxas e os descontos do operador.</p>
+    <div class="dashboard">
+      <form id="simulation" class="panel">
+        <h2>Sessão de carregamento</h2>
+        <label>Veículo<select name="vehicle"></select></label>
+        <div class="grid">
+          <label>Energia (kWh)<input name="kWh" type="number" min="0.01" max="1000000" step="any" required></label>
+          <label>Ligação<select name="charging"><option value="ac">AC</option><option value="dc">DC</option></select></label>
+          <label>Potência do posto (kW)<input name="power" type="number" min="0" max="1000000" step="any" required></label>
+          <label>Duração (min)<input name="minutes" type="number" min="0" max="1000000" step="any" required></label>
+        </div>
+        <label class="check"><input name="auto" type="checkbox"> Calcular duração pela potência</label>
+        <label class="check"><input name="credit" type="checkbox"> Usar créditos promocionais</label>
+        <p id="duration-note" class="muted"></p>
+        <div id="fuel"></div>
+      </form>
+      <section aria-labelledby="comparison-title">
+        <h2 id="comparison-title">Comparação de operadores</h2>
+        <p class="muted">Os tarifários iniciais são exemplos editáveis. Confirma o IVA e os descontos na aplicação do operador.</p>
+        <div id="results"></div>
+      </section>
+    </div>
+  </section>
+  <section id="tariffs" hidden>
+    <div class="section-head"><h1>Tarifários</h1><button class="primary" id="add">Novo tarifário</button></div>
+    <div id="tariff-list" class="cards"></div>
+  </section>
+  <section id="history" hidden>
+    <div class="section-head"><h1>Histórico</h1><button class="primary" id="add-log">Registar sessão</button></div>
+    <div id="stats" class="stats"></div><div id="records" class="cards"></div>
+  </section>
+  <section id="settings" hidden>
+    <h1>Definições</h1>
+    <div id="vehicles" class="cards"></div>
+    <section class="panel data"><h2>Cópia de segurança</h2><p class="muted">Tarifários, histórico e definições ficam neste dispositivo. A importação atualiza registos com o mesmo identificador.</p>
+      <div class="actions"><button data-export="json">Exportar JSON</button><button data-export="csv">Exportar CSV</button><button id="import">Importar ficheiro</button></div>
+      <input id="file" type="file" accept=".json,.csv" hidden>
+    </section>
+  </section>
+</main>
+<dialog id="editor"><form id="edit-form"><div id="fields"></div><div class="actions"><button type="button" id="cancel">Cancelar</button><button class="primary" type="submit">Guardar</button></div></form></dialog>
+</body>
+</html>

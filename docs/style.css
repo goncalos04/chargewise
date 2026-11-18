@@ -1,0 +1,49 @@
+:root{color-scheme:dark;--bg:#101513;--panel:#19211d;--input:#111a15;--line:#304036;--text:#f1f8f2;--muted:#abbeb0;--accent:#a6f881;--on-accent:#142415;--best:#223926;font-family:system-ui,sans-serif}
+[data-theme=light]{color-scheme:light;--bg:#edf3ee;--panel:#fff;--input:#f4f8f4;--line:#cbd9ce;--text:#17261b;--muted:#4b6051;--accent:#286134;--on-accent:#fff;--best:#e0f2df}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text)}
+.shell{max-width:1200px;margin:auto;padding-inline:clamp(16px,4vw,44px)}
+header{border-bottom:1px solid var(--line);background:var(--panel)}
+.top,.actions,.section-head,.result-head,.metrics{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top,.section-head,.result-head{justify-content:space-between}
+.top{min-height:72px}
+.brand{display:flex;align-items:center;gap:0;color:var(--text);text-decoration:none;font-size:22px;font-weight:800;letter-spacing:-.05em}
+.brand img{margin-right:10px;border-radius:12px}.brand span{color:var(--accent)}
+main{padding-bottom:48px}
+nav{display:flex;gap:5px;border-bottom:1px solid var(--line);margin:16px 0 30px;overflow:auto}
+nav button{background:transparent;border:0;border-radius:0;padding-inline:clamp(8px,2vw,18px);white-space:nowrap}
+nav [aria-current]{border-bottom:3px solid var(--accent);color:var(--accent)}
+h1{font-size:clamp(28px,5vw,49px);line-height:1.03;letter-spacing:-.055em;margin:.35em 0}
+h2{font-size:19px;margin:0 0 14px;letter-spacing:-.025em}h3{margin:0;font-size:17px;overflow-wrap:anywhere}
+p{line-height:1.5}.intro,.muted,small{color:var(--muted)}.intro{margin-bottom:24px}.muted,small{font-size:.88rem}
+.dashboard{display:grid;grid-template-columns:minmax(275px,.85fr) minmax(0,1.65fr);gap:24px;align-items:start}
+.panel{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px}
+.cards,#results,.stats,.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.stats{grid-template-columns:repeat(4,minmax(0,1fr));margin:16px 0}
+.section-head{margin-bottom:18px}
+button,input,select{font:inherit}
+button{border:1px solid var(--line);background:var(--input);color:var(--text);border-radius:10px;padding:9px 12px;min-height:44px;cursor:pointer;font-size:.87rem;font-weight:650}
+button:hover{border-color:var(--accent)}
+.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+label{display:block;font-size:.86rem;margin-bottom:12px;font-weight:620}
+input:not([type=checkbox]),select{width:100%;min-width:0;min-height:44px;margin-top:5px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--input);color:var(--text)}
+input[type=checkbox]{accent-color:var(--accent);width:17px;height:17px}
+.check{display:flex;align-items:center;gap:8px;font-weight:500;margin:8px 0}
+.best{border-color:var(--accent);background:var(--best)}
+.badge{font-size:.73rem;font-weight:720;color:var(--accent)}
+.total{font-size:clamp(27px,4vw,40px);font-weight:800;letter-spacing:-.055em;margin:8px 0;display:block}
+.metrics{gap:12px;font-size:.87rem;font-variant-numeric:tabular-nums}
+details{margin:14px 0;font-size:.86rem;color:var(--muted)}
+summary{cursor:pointer;padding-block:5px}
+details ul{padding-inline-start:18px;line-height:1.45}
+.fuel{border-top:1px solid var(--line);padding-top:12px}.fuel p{margin:7px 0}
+.data{margin-top:16px}
+#status{padding:10px 14px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:18px;width:min(570px,calc(100% - 24px));padding:20px}
+dialog::backdrop{background:#050a08aa}
+fieldset{border:1px solid var(--line);border-radius:10px;margin:0 0 12px;padding:10px}
+fieldset .actions label{margin:0}
+dialog .actions:last-child{justify-content:flex-end}
+@media(max-width:740px){.dashboard{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:430px){.cards{grid-template-columns:1fr}.panel{padding:13px}#results{gap:8px}.result-head{align-items:flex-start;flex-direction:column}.result-head h3{font-size:15px}}
