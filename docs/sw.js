@@ -1,11 +1,11 @@
 const prefix = 'chargewise-' + self.registration.scope + '-';
-const version = prefix + '2';
+const version = prefix + '3';
 const files = ['./index.html', './style.css', './app.js', './finance.js', './data.js',
   './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const assets = new Set(files.map(file => new URL(file, self.registration.scope).href));
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(version).then(cache => cache.addAll(files)));
+  event.waitUntil(caches.open(version).then(cache => cache.addAll([...assets].map(url => new Request(url, { cache: 'reload' })))));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys =>
