@@ -47,3 +47,10 @@ fieldset .actions label{margin:0}
 dialog .actions:last-child{justify-content:flex-end}
 @media(max-width:740px){.dashboard{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:430px){.cards{grid-template-columns:1fr}.panel{padding:13px}#results{gap:8px}.result-head{align-items:flex-start;flex-direction:column}.result-head h3{font-size:15px}}
+
+.comparison{margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:16px;color:var(--text)}
+.comparison summary{font-size:1rem;font-weight:700}
+.verdict h3{font-size:clamp(24px,4vw,36px);letter-spacing:-.045em}
+.verdict .badge{margin-top:0;font-size:.85rem}
+.verdict.unfavourable{border-color:#dc8a63}
+.verdict .actions{margin-top:16px}

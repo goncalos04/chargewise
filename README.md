@@ -2,6 +2,10 @@
 
 PWA em português de Portugal para comparar tarifários de carregamento. HTML, CSS e JavaScript sem dependências de execução. Os dados ficam no navegador, sem conta ou backend.
 
+## Avaliar um carregamento
+
+No simulador, escolhe o tarifário que tens à frente e indica a energia e a duração. O resultado mostra o custo total e a diferença para a referência escolhida. No Kia, a referência é o custo da gasolina para percorrer a mesma distância. No B10, define o máximo que aceitas pagar por kWh. A comparação entre operadores fica em **Comparar todos os operadores**.
+
 ## Executar e testar
 
 Requer Python 3 para o servidor local e Node.js 22 ou posterior para os testes.

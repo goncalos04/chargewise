@@ -22,11 +22,12 @@
   </nav>
   <p id="status" role="status" hidden></p>
   <section id="simulator">
-    <h1>Quanto custa carregar?</h1>
-    <p class="intro">Compara o custo real da sessão, incluindo as taxas e os descontos do operador.</p>
+    <h1>Compensa carregar aqui?</h1>
+    <p class="intro">Escolhe o tarifário que tens à frente e descobre quanto vais pagar e se vale a pena.</p>
     <div class="dashboard">
       <form id="simulation" class="panel">
         <h2>Sessão de carregamento</h2>
+        <label>Tarifário a avaliar<select name="tariff"></select></label>
         <label>Veículo<select name="vehicle"></select></label>
         <div class="grid">
           <label>Energia (kWh)<input name="kWh" type="number" min="0.01" max="1000000" step="any" required></label>
@@ -37,14 +38,18 @@
         <label class="check"><input name="auto" type="checkbox"> Calcular duração pela potência</label>
         <label class="check"><input name="credit" type="checkbox"> Usar créditos promocionais</label>
         <p id="duration-note" class="muted"></p>
-        <div id="fuel"></div>
+        <div id="budget" hidden><label>Limite aceitável (€/kWh)<input name="target" type="number" min="0" max="1000000" step="any" placeholder="Define o teu limite"></label></div>
       </form>
-      <section aria-labelledby="comparison-title">
-        <h2 id="comparison-title">Comparação de operadores</h2>
-        <p class="muted">Os tarifários iniciais são exemplos editáveis. Confirma o IVA e os descontos na aplicação do operador.</p>
-        <div id="results"></div>
+      <section aria-labelledby="decision-title">
+        <h2 id="decision-title">Vale a pena carregar?</h2>
+        <div id="decision" class="panel verdict" aria-live="polite"></div>
       </section>
     </div>
+    <details class="comparison">
+      <summary id="comparison-title">Comparar todos os operadores</summary>
+        <p class="muted">Os tarifários iniciais são exemplos editáveis. Confirma o IVA e os descontos na aplicação do operador.</p>
+        <div id="results"></div>
+    </details>
   </section>
   <section id="tariffs" hidden>
     <div class="section-head"><h1>Tarifários</h1><button class="primary" id="add">Novo tarifário</button></div>

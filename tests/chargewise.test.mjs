@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { quote, estimateMinutes, fuelCost } from '../docs/finance.js';
+import { quote, estimateMinutes, fuelCost, assessCharge } from '../docs/finance.js';
 import { defaults, toCSV, fromCSV, validate } from '../docs/data.js';
 
 test('Electroverse aplica crédito até ao valor elegível', () => {
@@ -63,4 +63,20 @@ test('rejeita IVA e descontos inválidos e CSV incompatível', () => {
   data.tariffs[0].discount = 101;
   assert.throws(() => validate(data));
   assert.throws(() => fromCSV('outro;formato'));
+});
+
+test('avalia a sessão pela distância equivalente a gasolina ou pelo limite por kWh', () => {
+  assert.deepEqual(assessCharge({ total: 3.24 }, 7, 17, 9.45, 'per100'), { difference: 0.65 });
+  assert.deepEqual(assessCharge({ total: 8.67 }, 7, 17, 9.45, 'per100'), { difference: -4.78 });
+  assert.deepEqual(assessCharge({ total: 3.24 }, 7, 19, 0.5, 'perKWh'), { difference: 0.26 });
+  assert.deepEqual(assessCharge({ total: 3.50 }, 7, 19, 0.5, 'perKWh'), { difference: 0 });
+  assert.equal(assessCharge({ total: 3.24 }, 7, 19, null, 'perKWh'), null);
+});
+
+test('importa cópias CSV anteriores à seleção de tarifário e limite', () => {
+  const original = defaults();
+  const legacy = toCSV(original).split('\r\n').map(row => row.replace(/;"[^"]*";"[^"]*"$/, '')).join('\r\n');
+  delete original.simulation.tariff;
+  delete original.simulation.target;
+  assert.deepEqual(fromCSV(legacy), original);
 });

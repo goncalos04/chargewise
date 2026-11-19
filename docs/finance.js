@@ -25,3 +25,10 @@ export function quote(tariff, kWh, minutes, consumption, useCredit = true) {
 export function fuelCost(price, consumption) {
   return price * consumption;
 }
+
+export function assessCharge(result, kWh, consumption, baseline, unit) {
+  if (baseline === null) return null;
+  const sessionLimit = unit === 'per100' ? baseline * kWh / consumption : baseline * kWh;
+  const difference = Math.round((sessionLimit + 1e-9) * 100) - Math.round(result.total * 100);
+  return { difference: difference / 100 };
+}

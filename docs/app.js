@@ -1,4 +1,4 @@
-import { components, estimateMinutes, quote, fuelCost } from './finance.js';
+import { components, estimateMinutes, quote, fuelCost, assessCharge } from './finance.js';
 import { blankTariff, defaults, load, save, toCSV, fromCSV, validate } from './data.js';
 
 const $ = id => document.getElementById(id);
@@ -108,7 +108,7 @@ function writeSimulation() {
   for (const [key, value] of Object.entries(data.simulation)) {
     const input = form.elements.namedItem(key);
     if (input.type === 'checkbox') input.checked = value;
-    else input.value = value;
+    else input.value = value ?? '';
   }
 }
 
@@ -119,18 +119,21 @@ function renderSimulation() {
   const minutes = s.auto ? estimate : s.minutes;
   form.elements.minutes.disabled = s.auto;
   if (s.auto) form.elements.minutes.value = estimate ?? '';
+  const budget = $('budget');
+  budget.hidden = vehicle.id === 'niro';
+  form.elements.target.disabled = budget.hidden;
   const valid = Array.from(form.elements).filter(input => input.willValidate).every(input => input.validity.valid);
   $('duration-note').textContent = estimate === null
     ? 'Estimativa indisponível com esta ligação ou potência.'
     : `A ${fmt(Math.min(vehicle[s.charging], s.power))} kW, a duração mínima estimada é ${estimate} min.` +
       (minutes < estimate && !s.auto ? ' A duração manual é inferior a este valor.' : '');
   const fuel = vehicle.id === 'niro' ? fuelCost(vehicle.fuelPrice, vehicle.fuelConsumption) : null;
-  $('fuel').innerHTML = fuel === null ? '' : `<div class="fuel"><strong>${money(fuel)} / 100 km a gasolina</strong>
-    <p class="muted">${fmt(vehicle.fuelConsumption)} l/100 km × ${money(vehicle.fuelPrice)}/l · <button type="button" id="edit-fuel">Ajustar</button></p></div>`;
-  if ($('edit-fuel')) $('edit-fuel').onclick = () => editVehicle(vehicle);
   currentLogOptions = [];
+  const decision = $('decision');
+  decision.className = 'panel verdict';
   if (!valid || minutes === null) {
-    results.textContent = 'Preenche valores válidos ou introduz a duração manualmente.';
+    decision.textContent = 'Preenche valores válidos ou introduz a duração manualmente.';
+    results.replaceChildren();
     return;
   }
   const ranked = data.tariffs.map(t => ({ t, q: quote(t, s.kWh, minutes, vehicle.consumption, s.credit) }))
@@ -138,6 +141,32 @@ function renderSimulation() {
   currentLogOptions = ranked.map(({ t, q }) => ({
     name: t.name, vehicle: vehicle.name, kWh: s.kWh, minutes, total: q.total
   }));
+  const selectedIndex = ranked.findIndex(({ t }) => t.id === form.elements.tariff.value);
+  if (selectedIndex === -1) {
+    decision.textContent = 'Cria um tarifário para avaliar este carregamento.';
+  } else {
+    const { t, q } = ranked[selectedIndex];
+    const target = s.target ?? null;
+    const assessment = assessCharge(q, s.kWh, vehicle.consumption, fuel ?? target, fuel === null ? 'perKWh' : 'per100');
+    const difference = assessment?.difference;
+    const verdict = difference === undefined ? 'Define o teu limite' : difference > 0 ? 'Compensa carregar'
+      : difference < 0 ? 'Não compensa carregar' : 'Fica ao mesmo preço';
+    const reference = fuel === null
+      ? (target === null ? 'Introduz o preço máximo por kWh que estás disposto a pagar.' : `Limite escolhido · ${fmt(target)} €/kWh`)
+      : `Gasolina · ${money(fuel)}/100 km · ${money(fuel * s.kWh / vehicle.consumption)} para a mesma distância`;
+    const savings = difference ? `<p><strong>${money(Math.abs(difference))} ${difference > 0 ? 'abaixo' : 'acima'} da referência nesta sessão</strong></p>` : '';
+    decision.classList.toggle('best', difference > 0);
+    decision.classList.toggle('unfavourable', difference < 0);
+    decision.innerHTML = `<p class="badge">${safe(t.name)}</p><h3>${verdict}</h3>
+      <strong class="total">${money(q.total)}</strong>
+      <div class="metrics"><span>${fmt(q.perKWh)} €/kWh</span><span>${money(q.per100)}/100 km</span></div>
+      ${savings}<p class="muted">${reference}</p>
+      ${q.credit > 0 ? `<p class="muted">Com ${money(q.credit)} de crédito promocional.</p>` : ''}
+      <div class="actions"><button type="button" class="primary" data-log="${selectedIndex}">Registar sessão</button>
+      <button type="button" data-tariff="${data.tariffs.indexOf(t)}">Editar preço e taxas</button>
+      ${fuel === null ? '' : '<button type="button" id="edit-fuel">Ajustar gasolina</button>'}</div>`;
+    if ($('edit-fuel')) $('edit-fuel').onclick = () => editVehicle(vehicle);
+  }
   const open = new Set([...results.querySelectorAll('details[open]')].map(d => d.dataset.key));
   results.innerHTML = ranked.map(({ t, q }, i) => {
     const best = q.total === ranked[0].q.total;
@@ -171,7 +200,8 @@ form.addEventListener('input', event => {
     renderSimulation();
     return;
   }
-  const value = input.type === 'checkbox' ? input.checked : input.type === 'number' ? input.valueAsNumber : input.value;
+  const value = input.type === 'checkbox' ? input.checked : input.type === 'number'
+    ? (input.value === '' ? null : input.valueAsNumber) : input.value;
   persist({ ...data, simulation: { ...data.simulation, [input.name]: value } });
   if (input.name === 'auto' && !value) form.elements.minutes.value = data.simulation.minutes;
   renderSimulation();
@@ -202,7 +232,10 @@ function render() {
   document.documentElement.dataset.theme = data.theme;
   $('theme').textContent = data.theme === 'dark' ? 'Modo claro' : 'Modo escuro';
   form.elements.vehicle.innerHTML = data.vehicles.map(v => `<option value="${safe(v.id)}">${safe(v.name)}</option>`).join('');
+  form.elements.tariff.innerHTML = data.tariffs.map(t => `<option value="${safe(t.id)}">${safe(t.name)}</option>`).join('');
   writeSimulation();
+  if (!form.elements.tariff.value) form.elements.tariff.selectedIndex = 0;
+  if (data.simulation.target === undefined) form.elements.target.value = '';
   renderSimulation();
   $('tariff-list').innerHTML = data.tariffs.map((t, i) => `<article class="panel">
     <h3>${safe(t.name)}</h3><p class="muted">${components.map(key => fmt(t[key].rate) + ' ' + units[key]).join(' · ')}</p>

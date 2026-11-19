@@ -1,5 +1,5 @@
 const prefix = 'chargewise-' + self.registration.scope + '-';
-const version = prefix + '1';
+const version = prefix + '2';
 const files = ['./index.html', './style.css', './app.js', './finance.js', './data.js',
   './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const assets = new Set(files.map(file => new URL(file, self.registration.scope).href));

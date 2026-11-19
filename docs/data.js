@@ -16,7 +16,7 @@ export const defaults = () => ({
   ],
   history: [],
   theme: 'dark',
-  simulation: { vehicle: 'niro', kWh: 7, minutes: 120, charging: 'ac', power: 7.4, auto: false, credit: true }
+  simulation: { vehicle: 'niro', kWh: 7, minutes: 120, charging: 'ac', power: 7.4, auto: false, credit: true, tariff: 'electroverse', target: null }
 });
 
 const key = 'chargewise-v1';
@@ -32,13 +32,13 @@ export function save(data) {
 const columns = ['tipo', 'id', 'nome', 'iva', 'desconto', 'credito',
   ...['energia', 'tempo', 'sessao'].flatMap(key => [key, key + '_iva', key + '_desconto', key + '_credito']),
   'ac', 'dc', 'consumo', 'preco_gasolina', 'consumo_gasolina', 'data', 'veiculo',
-  'kwh', 'minutos', 'total', 'tema', 'modo', 'potencia', 'automatico', 'usar_credito'];
+  'kwh', 'minutos', 'total', 'tema', 'modo', 'potencia', 'automatico', 'usar_credito', 'tarifario_ativo', 'limite_kwh'];
 
 export function toCSV(data) {
   const rows = [
     ['configuracao', ...Array(23).fill(''), data.simulation.vehicle, data.simulation.kWh,
       data.simulation.minutes, '', data.theme, data.simulation.charging, data.simulation.power,
-      data.simulation.auto, data.simulation.credit],
+      data.simulation.auto, data.simulation.credit, data.simulation.tariff, data.simulation.target],
     ...data.tariffs.map(t => ['tarifario', t.id, t.name, t.vat, t.discount, t.credit,
       ...[t.energy, t.time, t.session].flatMap(r => [r.rate, r.vatIncluded, r.discount, r.credit])]),
     ...data.vehicles.map(v => ['veiculo', v.id, v.name, ...Array(15).fill(''),
@@ -68,7 +68,8 @@ function parseCSV(source) {
 
 export function fromCSV(source) {
   const [header, ...rows] = parseCSV(source.replace(/^\uFEFF/, ''));
-  if (header?.join(';') !== columns.join(';') || rows.some(row => row.length !== columns.length)) {
+  const legacy = header?.join(';') === columns.slice(0, -2).join(';');
+  if ((!legacy && header?.join(';') !== columns.join(';')) || rows.some(row => row.length !== header.length)) {
     throw Error('Usa o formato CSV exportado pela ChargeWise.');
   }
   const sets = { version: 1, tariffs: [], vehicles: [], history: [] };
@@ -85,6 +86,7 @@ export function fromCSV(source) {
         sets.theme = cell.tema;
         sets.simulation = { vehicle: cell.veiculo, kWh: num(cell.kwh), minutes: num(cell.minutos),
           charging: cell.modo, power: num(cell.potencia), auto: bool(cell.automatico), credit: bool(cell.usar_credito) };
+        if (!legacy) Object.assign(sets.simulation, { tariff: cell.tarifario_ativo, target: cell.limite_kwh ? num(cell.limite_kwh) : null });
         break;
       case 'tarifario':
         sets.tariffs.push({ ...identity, vat: num(cell.iva), discount: num(cell.desconto), credit: num(cell.credito),
@@ -120,7 +122,8 @@ export function validate(data) {
     !list(data.history, h => typeof h.date === 'string' && Number.isFinite(Date.parse(h.date)) && string(h.vehicle)
       && number(h.kWh, 0.01) && number(h.minutes) && number(h.total, 0, Number.MAX_SAFE_INTEGER / 100)) ||
     !s || !data.vehicles.some(v => v.id === s.vehicle) || !['ac', 'dc'].includes(s.charging) ||
-    !number(s.kWh, 0.01) || !number(s.minutes) || !number(s.power) || !flag(s.auto) || !flag(s.credit)) {
+    (s.tariff !== undefined && s.tariff !== '' && !string(s.tariff)) ||
+    (s.target != null && !number(s.target)) || !number(s.kWh, 0.01) || !number(s.minutes) || !number(s.power) || !flag(s.auto) || !flag(s.credit)) {
     throw Error('O ficheiro contém dados inválidos ou uma versão incompatível.');
   }
   return data;
