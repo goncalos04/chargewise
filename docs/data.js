@@ -4,11 +4,22 @@ export const blankTariff = () => ({
   energy: rule(0), time: rule(0), session: rule(0)
 });
 
+export const atlanteTariffs = () => [
+  { ...blankTariff(), id: 'myatlante-vazio', name: 'myAtlante · Vazio', energy: rule(0.18), time: rule(0.048), session: rule(0.45) },
+  { ...blankTariff(), id: 'myatlante-fora-vazio', name: 'myAtlante · Fora de vazio', energy: rule(0.30), time: rule(0.048), session: rule(0.45) }
+];
+
+export function withAtlanteTariffs(data) {
+  const missing = atlanteTariffs().filter(t => !data.tariffs.some(saved => saved.id === t.id));
+  return { ...data, tariffs: [...data.tariffs, ...missing] };
+}
+
 export const defaults = () => ({
   version: 1,
   tariffs: [
-    { ...blankTariff(), id: 'electroverse', name: 'Electroverse', energy: rule(0.42), session: rule(0.30), credit: 5 },
-    { ...blankTariff(), id: 'telpark', name: 'Telpark', energy: rule(0.59, true), time: rule(0.043), discount: 15 }
+    { ...blankTariff(), id: 'electroverse', name: 'Electroverse', energy: rule(0.42), time: rule(0.05), session: rule(0.30), credit: 5 },
+    { ...blankTariff(), id: 'telpark', name: 'Telpark', energy: rule(0.59, true), time: rule(0.043), discount: 15 },
+    ...atlanteTariffs()
   ],
   vehicles: [
     { id: 'niro', name: 'Kia Niro Urban PHEV · 01/2020', ac: 3.3, dc: 0, consumption: 17, fuelPrice: 1.75, fuelConsumption: 5.4 },
@@ -22,7 +33,16 @@ export const defaults = () => ({
 const key = 'chargewise-v1';
 export function load() {
   const saved = localStorage.getItem(key);
-  return saved ? validate(JSON.parse(saved)) : defaults();
+  if (!saved) {
+    localStorage.setItem(key + '-atlante', '1');
+    return defaults();
+  }
+  const data = validate(JSON.parse(saved));
+  if (localStorage.getItem(key + '-atlante')) return data;
+  const updated = withAtlanteTariffs(data);
+  save(updated);
+  localStorage.setItem(key + '-atlante', '1');
+  return updated;
 }
 
 export function save(data) {

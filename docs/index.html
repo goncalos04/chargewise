@@ -28,7 +28,9 @@
       <form id="simulation" class="panel">
         <h2>Sessão de carregamento</h2>
         <label>Tarifário a avaliar<select name="tariff"></select></label>
-        <label>Veículo<select name="vehicle"></select></label>
+        <div class="actions"><button type="button" data-quick>Ajustar preços para este posto</button>
+          <button type="button" data-new-tariff>Novo tarifário</button></div>
+        <label class="vehicle-field">Veículo<select name="vehicle"></select></label>
         <div class="grid">
           <label>Energia (kWh)<input name="kWh" type="number" min="0.01" max="1000000" step="any" required></label>
           <label>Ligação<select name="charging"><option value="ac">AC</option><option value="dc">DC</option></select></label>
@@ -46,8 +48,8 @@
       </section>
     </div>
     <details class="comparison">
-      <summary id="comparison-title">Comparar todos os operadores</summary>
-        <p class="muted">Os tarifários iniciais são exemplos editáveis. Confirma o IVA e os descontos na aplicação do operador.</p>
+      <summary id="comparison-title">Comparar preços das apps</summary>
+        <p class="muted">Toca no nome de uma app para ajustar o preço deste posto. Para a myAtlante, escolhe o tarifário do horário correspondente.</p>
         <div id="results"></div>
     </details>
   </section>
@@ -69,5 +71,16 @@
   </section>
 </main>
 <dialog id="editor"><form id="edit-form"><div id="fields"></div><div class="actions"><button type="button" id="cancel">Cancelar</button><button class="primary" type="submit">Guardar</button></div></form></dialog>
+<dialog id="spot-editor" aria-labelledby="spot-title"><form id="spot-form">
+  <h2 id="spot-title">Preços neste posto</h2><p id="spot-name"></p>
+  <div id="spot-fields" class="grid"></div>
+  <p class="muted">Soma as taxas fixas no campo da sessão. Aplicam-se as regras de IVA, desconto e crédito do tarifário.</p>
+  <output id="spot-preview" aria-live="polite"></output>
+  <div class="actions"><button type="button" id="spot-cancel">Cancelar</button>
+    <button type="button" id="spot-reset" hidden>Repor preços guardados</button>
+    <button type="submit" class="primary" value="apply">Usar nesta simulação</button>
+    <button type="submit" value="save">Guardar no tarifário</button>
+  </div>
+</form></dialog>
 </body>
 </html>

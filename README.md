@@ -4,7 +4,9 @@ PWA em português de Portugal para comparar tarifários de carregamento. HTML, C
 
 ## Avaliar um carregamento
 
-No simulador, escolhe o tarifário que tens à frente e indica a energia e a duração. O resultado mostra o custo total e a diferença para a referência escolhida. No Kia, a referência é o custo da gasolina para percorrer a mesma distância. No B10, define o máximo que aceitas pagar por kWh. A comparação entre operadores fica em **Comparar todos os operadores**.
+No simulador, escolhe o tarifário que tens à frente e indica a energia e a duração. O resultado mostra o custo total e a diferença para a referência escolhida. No Kia, a referência é o custo da gasolina para percorrer a mesma distância. No B10, define o máximo que aceitas pagar por kWh. A comparação entre operadores fica em **Comparar preços das apps**.
+
+Em **Ajustar preços para este posto**, introduz energia em €/kWh, tempo em €/min ou €/hora e o total de taxas fixas. Podes usar os preços só enquanto a página estiver aberta ou guardá-los no tarifário. Na tabela, toca no nome de uma app para ajustar os seus preços. A simulação usa a mesma energia, duração e opção de crédito para todas as linhas. Os dois exemplos myAtlante correspondem às alternativas de horário do mesmo posto. Escolhe o horário aplicável, ou ajusta manualmente o preço médio de energia se a sessão atravessar os dois períodos.
 
 ## Executar e testar
 
@@ -42,10 +44,10 @@ Sessão manual de **7 kWh em 120 min**. Neste exemplo os preços estão configur
 
 | Tarifário | Cálculo | Total |
 | --- | --- | --- |
-| Electroverse | 7 × 0,42 € + 0,30 €, com 3,24 € de crédito utilizado | 0,00 € |
+| Electroverse | 7 × 0,42 € + 120 × 0,05 € + 0,30 €, com 5 € de crédito utilizado | 4,24 € |
 | Telpark | 7 × 0,59 € × 0,85 + 120 × 0,043 € | 8,67 € |
 
-Sem crédito, o Electroverse fica a **3,24 €**. Se os 15% também incidirem sobre o OPC, o Telpark fica a **7,90 €**. A duração automática do Kia a 3,3 kW é **128 min** para 7 kWh.
+Sem crédito, o Electroverse fica a **9,24 €**. Se os 15% também incidirem sobre o OPC, o Telpark fica a **7,90 €**. A duração automática do Kia a 3,3 kW é **128 min** para 7 kWh.
 
 ## Dados e organização
 

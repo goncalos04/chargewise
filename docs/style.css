@@ -54,3 +54,15 @@ dialog .actions:last-child{justify-content:flex-end}
 .verdict .badge{margin-top:0;font-size:.85rem}
 .verdict.unfavourable{border-color:#dc8a63}
 .verdict .actions{margin-top:16px}
+
+.vehicle-field{margin-top:14px}
+#results{display:block}
+.comparison-scroll{overflow-x:auto}
+.comparison table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.85rem}
+.comparison caption{text-align:left;color:var(--muted);padding:8px 0}
+.comparison th,.comparison td{text-align:right;border-bottom:1px solid var(--line);padding:8px 6px}
+.comparison th:first-child{text-align:left}
+.comparison th button{text-align:left;font-size:.8rem}
+.comparison th small{display:block}
+#spot-preview{display:block;margin:12px 0;font-weight:700}
+@media(max-width:740px){.dashboard>section{grid-row:1}}

@@ -1,14 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { quote, estimateMinutes, fuelCost, assessCharge } from '../docs/finance.js';
-import { defaults, toCSV, fromCSV, validate } from '../docs/data.js';
+import { defaults, toCSV, fromCSV, validate, withAtlanteTariffs } from '../docs/data.js';
 
 test('Electroverse aplica crédito até ao valor elegível', () => {
   const [tariff] = defaults().tariffs;
   const result = quote(tariff, 7, 120, 17);
-  assert.equal(result.total, 0);
-  assert.equal(result.credit.toFixed(2), '3.24');
-  assert.equal(quote(tariff, 7, 120, 17, false).total, 3.24);
+  assert.equal(result.total, 4.24);
+  assert.equal(result.credit.toFixed(2), '5.00');
+  assert.equal(quote(tariff, 7, 120, 17, false).total, 9.24);
 });
 
 test('Telpark desconta só energia por defeito e permite descontar o OPC', () => {
@@ -26,6 +26,7 @@ test('IVA, desconto e elegibilidade do crédito são independentes em cada compo
   tariff.energy.vatIncluded = false;
   tariff.energy.discount = true;
   tariff.session.credit = false;
+  tariff.time.rate = 0;
   tariff.discount = 10;
   let result = quote(tariff, 7, 120, 17);
   assert.equal(result.credit.toFixed(4), '3.2546');
@@ -79,4 +80,21 @@ test('importa cópias CSV anteriores à seleção de tarifário e limite', () =>
   delete original.simulation.tariff;
   delete original.simulation.target;
   assert.deepEqual(fromCSV(legacy), original);
+});
+
+test('compara 7 kWh em 39 minutos com os preços do posto', () => {
+  const tariffs = defaults().tariffs;
+  assert.deepEqual(tariffs.map(t => quote(t, 7, 39, 19, false).total), [5.19, 5.19, 3.58, 4.42]);
+  assert.equal(quote(tariffs[0], 7, 39, 19, true).total, 0.19);
+});
+
+test('adiciona os valores myAtlante sem duplicar ou alterar os tarifários guardados', () => {
+  const data = defaults();
+  data.tariffs = data.tariffs.slice(0, 2);
+  data.tariffs[0].time.rate = 0;
+  const updated = withAtlanteTariffs(data);
+  assert.equal(updated.tariffs.length, 4);
+  assert.equal(updated.tariffs[0].time.rate, 0);
+  updated.tariffs[2].energy.rate = 0.25;
+  assert.deepEqual(withAtlanteTariffs(updated), updated);
 });

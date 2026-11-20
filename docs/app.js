@@ -20,6 +20,10 @@ let data;
 let editAction;
 let currentLogOptions = [];
 let installPrompt;
+const spotPrices = new Map();
+const spotEditor = $('spot-editor');
+const spotForm = $('spot-form');
+let editingSpot;
 
 function status(message) {
   $('status').textContent = message;
@@ -86,9 +90,81 @@ function editTariff(existing) {
         discount: values.has(key + 'Discount'), credit: values.has(key + 'Credit') };
     }
     const tariffs = existing ? data.tariffs.map(row => row.id === t.id ? tariff : row) : [...data.tariffs, tariff];
-    return persist({ ...data, tariffs });
+    const simulation = existing ? data.simulation : { ...data.simulation, tariff: t.id };
+    if (!persist({ ...data, tariffs, simulation })) return false;
+    spotPrices.delete(t.id);
+    return true;
   });
 }
+
+function sessionQuote(tariff) {
+  const s = data.simulation;
+  const vehicle = data.vehicles.find(v => v.id === s.vehicle);
+  const minutes = s.auto ? estimateMinutes(s.kWh, vehicle[s.charging], s.power) : s.minutes;
+  return minutes === null ? null : quote(tariff, s.kWh, minutes, vehicle.consumption, s.credit);
+}
+
+function spotTariff() {
+  const tariff = { ...editingSpot };
+  for (const key of components) {
+    const value = spotForm.elements[key].valueAsNumber;
+    const hourly = key === 'time' && spotForm.elements.timeUnit.value === 'hour';
+    tariff[key] = { ...tariff[key], rate: hourly ? value / 60 : value };
+  }
+  return tariff;
+}
+
+function updateSpotPreview() {
+  const sessionValid = Array.from(form.elements).every(input => input.validity.valid);
+  const result = spotForm.checkValidity() && sessionValid ? sessionQuote(spotTariff()) : null;
+  $('spot-preview').textContent = result ? `${money(result.total)} pela sessão · ${fmt(result.perKWh)} €/kWh`
+    : 'Preenche preços e parâmetros de sessão válidos para ver o total.';
+}
+
+function quickPrices(saved) {
+  editingSpot = spotPrices.get(saved.id) ?? saved;
+  $('spot-name').textContent = editingSpot.name;
+  $('spot-fields').innerHTML = [
+    numberField('energy', 'Energia (€/kWh)', editingSpot.energy.rate),
+    numberField('time', 'Preço do tempo', editingSpot.time.rate),
+    '<label>Unidade do tempo<select name="timeUnit"><option value="minute">€/min</option><option value="hour">€/hora</option></select></label>',
+    numberField('session', 'Taxas fixas (€)', editingSpot.session.rate)
+  ].join('');
+  $('spot-reset').hidden = !spotPrices.has(saved.id);
+  updateSpotPreview();
+  spotEditor.showModal();
+}
+
+spotForm.addEventListener('input', event => {
+  if (event.target.name === 'timeUnit') {
+    const field = spotForm.elements.time;
+    if (field.value !== '') {
+      const scale = event.target.value === 'hour' ? 60 : 1 / 60;
+      field.value = Number((field.valueAsNumber * scale).toPrecision(12));
+    }
+    field.max = event.target.value === 'hour' ? 60000000 : 1000000;
+  }
+  updateSpotPreview();
+});
+spotForm.addEventListener('submit', event => {
+  event.preventDefault();
+  const tariff = spotTariff();
+  if (event.submitter?.value === 'save') {
+    if (!persist({ ...data, tariffs: data.tariffs.map(t => t.id === tariff.id ? tariff : t) })) return;
+    spotPrices.delete(tariff.id);
+    render();
+  } else {
+    spotPrices.set(tariff.id, tariff);
+    renderSimulation();
+  }
+  spotEditor.close();
+});
+$('spot-cancel').onclick = () => spotEditor.close();
+$('spot-reset').onclick = () => {
+  spotPrices.delete(editingSpot.id);
+  spotEditor.close();
+  renderSimulation();
+};
 
 function editVehicle(vehicle) {
   openEditor('Editar veículo', `<p>${safe(vehicle.name)}</p><div class="grid">
@@ -107,6 +183,7 @@ function editVehicle(vehicle) {
 function writeSimulation() {
   for (const [key, value] of Object.entries(data.simulation)) {
     const input = form.elements.namedItem(key);
+    if (!input) continue;
     if (input.type === 'checkbox') input.checked = value;
     else input.value = value ?? '';
   }
@@ -136,7 +213,10 @@ function renderSimulation() {
     results.replaceChildren();
     return;
   }
-  const ranked = data.tariffs.map(t => ({ t, q: quote(t, s.kWh, minutes, vehicle.consumption, s.credit) }))
+  const ranked = data.tariffs.map(saved => {
+    const t = spotPrices.get(saved.id) ?? saved;
+    return { t, q: quote(t, s.kWh, minutes, vehicle.consumption, s.credit) };
+  })
     .sort((a, b) => a.q.total - b.q.total);
   currentLogOptions = ranked.map(({ t, q }) => ({
     name: t.name, vehicle: vehicle.name, kWh: s.kWh, minutes, total: q.total
@@ -157,40 +237,44 @@ function renderSimulation() {
     const savings = difference ? `<p><strong>${money(Math.abs(difference))} ${difference > 0 ? 'abaixo' : 'acima'} da referência nesta sessão</strong></p>` : '';
     decision.classList.toggle('best', difference > 0);
     decision.classList.toggle('unfavourable', difference < 0);
-    decision.innerHTML = `<p class="badge">${safe(t.name)}</p><h3>${verdict}</h3>
+    decision.innerHTML = `<p class="badge">${safe(t.name)}${spotPrices.has(t.id) ? ' · Ajustado nesta simulação' : ''}</p><h3>${verdict}</h3>
       <strong class="total">${money(q.total)}</strong>
       <div class="metrics"><span>${fmt(q.perKWh)} €/kWh</span><span>${money(q.per100)}/100 km</span></div>
       ${savings}<p class="muted">${reference}</p>
       ${q.credit > 0 ? `<p class="muted">Com ${money(q.credit)} de crédito promocional.</p>` : ''}
       <div class="actions"><button type="button" class="primary" data-log="${selectedIndex}">Registar sessão</button>
-      <button type="button" data-tariff="${data.tariffs.indexOf(t)}">Editar preço e taxas</button>
+      <button type="button" data-spot="${safe(t.id)}">Ajustar preços</button>
       ${fuel === null ? '' : '<button type="button" id="edit-fuel">Ajustar gasolina</button>'}</div>`;
     if ($('edit-fuel')) $('edit-fuel').onclick = () => editVehicle(vehicle);
   }
   const open = new Set([...results.querySelectorAll('details[open]')].map(d => d.dataset.key));
-  results.innerHTML = ranked.map(({ t, q }, i) => {
-    const best = q.total === ranked[0].q.total;
-    const delta = fuel === null ? null : Number((fuel - q.per100).toFixed(2));
-    const comparison = delta === null ? '' : delta === 0 ? 'Custo igual à gasolina'
-      : `${money(Math.abs(delta))}/100 km ${delta > 0 ? 'abaixo' : 'acima'} da gasolina`;
-    return `<article class="panel ${best ? 'best' : ''}">
-      <div class="result-head"><h3>${safe(t.name)}</h3>${best ? '<span class="badge">Mais barato</span>' : ''}</div>
-      <strong class="total">${money(q.total)}</strong>
-      <div class="metrics"><span>${fmt(q.perKWh)} €/kWh</span><span>${money(q.per100)}/100 km</span></div>
-      ${comparison ? `<p class="muted">${comparison}</p>` : ''}
-      <details data-key="${safe(t.id)}" ${open.has(t.id) ? 'open' : ''}><summary>Cálculo e hipóteses</summary>
-        <p>${fmt(s.kWh)} kWh · ${fmt(minutes)} min · ${fmt(vehicle.consumption)} kWh/100 km da rede</p>
-        <ul>${q.lines.map(line => {
-          const rule = t[line.key];
-          return `<li>${labels[line.key]} · ${fmt(rule.rate)} ${units[line.key]} · ${rule.vatIncluded ? 'IVA incluído' : 'IVA de ' + fmt(t.vat) + '% acrescentado'} ·
-            ${rule.discount ? 'desconto de ' + fmt(t.discount) + '%' : 'sem desconto'} ·
-            ${rule.credit ? 'aceita crédito' : 'fora do crédito'} · ${money(line.afterDiscount)}</li>`;
-        }).join('')}</ul>
-        <p>Subtotal ${money(q.subtotal)} · Crédito usado ${money(q.credit)}</p>
-      </details>
-      <button type="button" data-log="${i}">Registar</button>
-    </article>`;
-  }).join('') || '<p class="muted">Cria um tarifário para comparar preços.</p>';
+  if (!ranked.length) {
+    results.textContent = 'Adiciona um tarifário para começar a comparar.';
+    return;
+  }
+  const heading = `${fmt(s.kWh)} kWh · ${fmt(minutes)} min · ${s.credit ? 'Créditos ativos' : 'Sem créditos'}`;
+  results.innerHTML = `<div class="comparison-scroll"><table>
+    <caption>${heading}</caption>
+    <thead><tr><th scope="col">Tarifário</th><th scope="col">Sessão</th><th scope="col">€/kWh</th><th scope="col">€/100 km</th></tr></thead>
+    <tbody>${ranked.map(({ t, q }) => {
+      const best = q.total === ranked[0].q.total;
+      return `<tr class="${best ? 'best' : ''}">
+        <th scope="row"><button type="button" data-spot="${safe(t.id)}" aria-label="Ajustar preços de ${safe(t.name)}">${safe(t.name)} <span aria-hidden="true">✎</span></button>
+        ${best ? '<small class="badge">Mais barato</small>' : ''}${spotPrices.has(t.id) ? '<small>Ajustado nesta simulação</small>' : ''}</th>
+        <td><strong>${money(q.total)}</strong></td><td>${fmt(q.perKWh)}</td><td>${fmt(q.per100)}</td></tr>`;
+    }).join('')}</tbody></table></div>
+    ${ranked.map(({ t, q }, index) => `<details data-key="${safe(t.id)}" ${open.has(t.id) ? 'open' : ''}>
+      <summary>Cálculo · ${safe(t.name)}</summary>
+      <ul>${q.lines.map(line => {
+        const rule = t[line.key];
+        return `<li>${labels[line.key]} · ${fmt(rule.rate)} ${units[line.key]} ·
+          ${rule.vatIncluded ? 'IVA incluído' : 'IVA de ' + fmt(t.vat) + '% acrescentado'} ·
+          ${rule.discount ? 'desconto de ' + fmt(t.discount) + '%' : 'sem desconto'} · ${money(line.afterDiscount)}</li>`;
+      }).join('')}</ul>
+      <p>Subtotal ${money(q.subtotal)} · Crédito usado ${money(q.credit)}</p>
+      <button type="button" data-log="${index}">Registar</button>
+      <button type="button" data-tariff="${data.tariffs.findIndex(row => row.id === t.id)}">Editar IVA e descontos</button>
+    </details>`).join('')}`;
 }
 
 form.addEventListener('submit', event => event.preventDefault());
@@ -259,7 +343,11 @@ function render() {
 
 function remove(collection, index) {
   if (confirm('Eliminar «' + data[collection][index].name + '»?')) {
-    if (persist({ ...data, [collection]: data[collection].filter((_, i) => i !== index) })) render();
+    const id = data[collection][index].id;
+    if (persist({ ...data, [collection]: data[collection].filter((_, i) => i !== index) })) {
+      if (collection === 'tariffs') spotPrices.delete(id);
+      render();
+    }
   }
 }
 
@@ -288,6 +376,7 @@ $('file').onchange = async event => {
     const incoming = file.name.toLowerCase().endsWith('.csv') ? fromCSV(contents) : validate(JSON.parse(contents.replace(/^\uFEFF/, '')));
     const merge = (old, next) => [...new Map([...old, ...next].map(item => [item.id, item])).values()];
     if (persist({ ...incoming, tariffs: merge(data.tariffs, incoming.tariffs), history: merge(data.history, incoming.history) })) {
+      spotPrices.clear();
       render();
       status('Dados importados com sucesso.');
     }
@@ -311,6 +400,16 @@ document.querySelector('main').addEventListener('click', event => {
     }
   }
   if (d.tariff !== undefined) editTariff(data.tariffs[d.tariff]);
+  if (d.spot !== undefined) {
+    const tariff = data.tariffs.find(t => t.id === d.spot);
+    if (tariff) quickPrices(tariff);
+  }
+  if (d.newTariff !== undefined) editTariff();
+  if (d.quick !== undefined) {
+    const tariff = data.tariffs.find(t => t.id === form.elements.tariff.value);
+    if (tariff) quickPrices(tariff);
+    else editTariff();
+  }
   if (d.vehicle !== undefined) editVehicle(data.vehicles[d.vehicle]);
   if (d.log !== undefined) editRecord(currentLogOptions[d.log]);
   if (d.record !== undefined) editRecord(data.history[d.record], true);
