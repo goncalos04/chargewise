@@ -1,5 +1,5 @@
 import { components, estimateMinutes, quote, fuelCost, assessCharge } from './finance.js';
-import { blankTariff, defaults, load, save, toCSV, fromCSV, validate } from './data.js';
+import { blankTariff, defaults, load, save, toCSV, fromCSV, validate, withAtlanteTariffs } from './data.js';
 
 const $ = id => document.getElementById(id);
 const euro = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' });
@@ -321,6 +321,7 @@ function render() {
   if (!form.elements.tariff.value) form.elements.tariff.selectedIndex = 0;
   if (data.simulation.target === undefined) form.elements.target.value = '';
   renderSimulation();
+  $('add-atlante').hidden = withAtlanteTariffs(data).tariffs.length === data.tariffs.length;
   $('tariff-list').innerHTML = data.tariffs.map((t, i) => `<article class="panel">
     <h3>${safe(t.name)}</h3><p class="muted">${components.map(key => fmt(t[key].rate) + ' ' + units[key]).join(' · ')}</p>
     <div class="actions"><button data-tariff="${i}">Editar</button><button data-remove-tariff="${i}">Eliminar</button></div>
@@ -417,6 +418,10 @@ document.querySelector('main').addEventListener('click', event => {
   if (d.removeRecord !== undefined) remove('history', +d.removeRecord);
   if (d.export) download(d.export);
 });
+
+$('add-atlante').onclick = () => {
+  if (persist(withAtlanteTariffs(data))) render();
+};
 
 window.addEventListener('beforeinstallprompt', event => {
   event.preventDefault();
